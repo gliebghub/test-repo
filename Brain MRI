@@ -1,0 +1,119 @@
+# Library for creating data paths
+import os
+
+# Library for randomly selecting data points
+import random
+
+# Library for performing numerical computations
+import numpy as np
+
+# Library for creating and showing plots
+import matplotlib.pyplot as plt
+
+# Library for reading and showing images
+import matplotlib.image as mpimg
+
+# Importing all the required sub-modules from Keras
+from keras.models import Sequential, Model
+from keras.applications.vgg16 import VGG16
+from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.utils import img_to_array, load_img
+from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, BatchNormalization, Dropout
+from google.colab import drive
+drive.mount('/content/drive')
+
+# Parent directory where images are stored in drive
+parent_dir = r"xxxxxxxxxxxxxxx/brain_tumor"
+
+# Path to the training and testing datasets within the parent directory
+train_dir = os.path.join(parent_dir, 'Training')
+validation_dir = os.path.join(parent_dir, 'Testing')
+
+# Directory with our training pictures
+train_pituitary_dir = os.path.join(train_dir, 'pituitary_tumor')
+train_no_dir = os.path.join(train_dir, 'no_tumor')
+
+# Directory with our testing pictures
+validation_pituitary_dir = os.path.join(validation_dir, 'pituitary_tumor')
+validation_no_dir = os.path.join(validation_dir, 'no_tumor')
+
+train_pituitary_file_names = os.listdir(train_pituitary_dir)
+
+train_pituitary_file_names = os.listdir(train_pituitary_dir)
+train_no_file_names = os.listdir(train_no_dir)
+
+fig = plt.figure(figsize=(16, 8))
+fig.set_size_inches(16, 16)
+
+pituitary_img_paths = [os.path.join(train_pituitary_dir, file_name) for file_name in train_pituitary_file_names[:8]]
+no_img_paths = [os.path.join(train_no_dir, file_name) for file_name in train_no_file_names[:8]]
+
+for i, img_path in enumerate(pituitary_img_paths + no_img_paths):
+    ax = plt.subplot(4, 4, i + 1)
+    ax.axis('Off')
+
+    img = mpimg.imread(img_path)
+    plt.imshow(img)
+
+plt.show()
+
+
+# All images to be rescaled by 1/255.
+train_datagen = ImageDataGenerator(rescale=1. / 255.0,
+                              horizontal_flip = True,
+                              vertical_flip = False,
+                              height_shift_range= 0.1,
+                              width_shift_range=0.1,
+                              rotation_range=20,
+                              shear_range = 0.1,
+                              zoom_range=0.1)
+test_datagen  = ImageDataGenerator(rescale = 1.0/255.)
+
+# Flowing training images in batches of 20 using train_datagen generator
+train_generator = train_datagen.flow_from_directory(train_dir,
+                                                    batch_size=20,
+                                                    class_mode='binary',
+                                                    target_size=(224, 224))
+
+# Flowing testing images in batches of 20 using test_datagen generator
+validation_generator =  test_datagen.flow_from_directory(validation_dir,
+                                                         batch_size=20,
+                                                         class_mode  = 'binary',
+                                                         target_size = (224, 224))
+
+
+images, labels = next(train_generator)
+fig, axes = plt.subplots(4, 4, figsize = (16, 8))
+fig.set_size_inches(16, 16)
+for (image, label, ax) in zip(images, labels, axes.flatten()):
+    ax.imshow(image)
+    if label == 1:
+        ax.set_title('pituitary tumor')
+    else:
+        ax.set_title('no tumor')
+    ax.axis('off')
+
+
+cnn_model = Sequential()
+cnn_model.add(Conv2D(64, (3,3), activation='relu', input_shape=(224, 224, 3), padding = 'same'))
+cnn_model.add(MaxPooling2D(2,2))
+cnn_model.add(BatchNormalization())
+cnn_model.add(Conv2D(32, (3,3), activation='relu', padding = 'same'))
+cnn_model.add(MaxPooling2D(2,2))
+cnn_model.add(BatchNormalization())
+cnn_model.add(Conv2D(32, (3,3), activation='relu', padding = 'same'))
+cnn_model.add(MaxPooling2D(2,2))
+cnn_model.add(Conv2D(16, (3,3), activation='relu', padding = 'same'))
+cnn_model.add(Flatten())
+cnn_model.add(Dense(64, activation='relu'))
+cnn_model.add(Dropout(0.25))
+cnn_model.add(Dense(32, activation='relu'))
+cnn_model.add(Dropout(0.25))
+cnn_model.add(Dense(32, activation='relu'))
+cnn_model.add(Dense(1, activation='sigmoid'))
+
+
+
+
+
+
